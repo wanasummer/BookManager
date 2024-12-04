@@ -2,52 +2,21 @@
   <div class="app-container">
     <el-form :inline="true" :model="queryParams" label-width="80px">
       <el-form-item label="书名" prop="book_name">
-        <el-input
-          v-model="queryParams.book_name"
-          style="width: 200px"
-          clearable
-          placeholder="请输入用户名"
-        />
+        <el-input v-model="queryParams.book_name" style="width: 200px" clearable placeholder="请输入用户名" />
       </el-form-item>
       <el-form-item label="书本ISBN" prop="book_isbn">
-        <el-input
-          v-model="queryParams.book_isbn"
-          clearable
-          style="width: 200px"
-          placeholder="请输入发布者"
-        />
+        <el-input v-model="queryParams.book_isbn" clearable style="width: 200px" placeholder="请输入发布者" />
       </el-form-item>
       <el-form-item label="出版社" prop="book_press">
-        <el-input
-          v-model="queryParams.book_press"
-          style="width: 200px"
-          clearable
-          placeholder="请输入用户名"
-        />
+        <el-input v-model="queryParams.book_press" style="width: 200px" clearable placeholder="请输入用户名" />
       </el-form-item>
       <el-form-item label="作者" prop="book_author">
-        <el-input
-          v-model="queryParams.book_author"
-          clearable
-          style="width: 200px"
-          placeholder="请输入发布者"
-        />
+        <el-input v-model="queryParams.book_author" clearable style="width: 200px" placeholder="请输入发布者" />
       </el-form-item>
       <el-form-item>
-        <el-button type="primary" icon="Search" @click="handleQuery"
-          >搜 索</el-button
-        >
+        <el-button type="primary" icon="Search" @click="handleQuery">搜 索</el-button>
         <el-button icon="Refresh" @click="refresh">重 置</el-button>
-        <el-button type="success" icon="Plus" @click="handleAddBook"
-          >新 增</el-button
-        >
-        <el-button
-          type="danger"
-          icon="Delete"
-          @click="handleDelete"
-          v-show="btn_show"
-          >删 除</el-button
-        >
+        <el-button type="success" icon="Plus" @click="handleAddBook">新 增</el-button>
       </el-form-item>
     </el-form>
     <el-table :data="formList" style="width: 100%">
@@ -60,15 +29,16 @@
       <el-table-column label="价格" prop="book_price" align="center" />
       <el-table-column label="操作" align="center">
         <template #default="scope">
-          <el-button size="small" type="primary" @click="handle(scope.row)">
+          <el-button size="small" type="primary" @click="handleDetail(scope.row)">
             详情
           </el-button>
         </template>
       </el-table-column>
     </el-table>
 
-    <pagination @pagination="getList" :page="queryParams.pageNum" :limit="queryParams.pageSize" v-show="total > 0" :total="total">
-    </pagination> 
+    <Pagination @pagination="getList" :page="queryParams.pageNum" :limit="queryParams.pageSize" v-show="total > 0"
+      :total="total">
+    </Pagination>
 
     <el-dialog v-model="addBookVisible" :title="title" width="500">
       <el-form :model="bookForm" :rules="rules">
@@ -96,11 +66,41 @@
         <el-button @click="cancel">取 消</el-button>
       </el-row>
     </el-dialog>
+
+    <el-dialog v-model="updateBookVisible" :title="title" width="500">
+      <el-form :model="bookForm" :rules="rules">
+        <el-form-item label="图书名称" prop="book_name">
+          <el-input v-model="bookForm.book_name"></el-input>
+        </el-form-item>
+        <el-form-item label="图书isbn" prop="book_isbn">
+          <el-input v-model="bookForm.book_isbn"></el-input>
+        </el-form-item>
+        <el-form-item label="图书出版社" prop="book_press">
+          <el-input v-model="bookForm.book_press"></el-input>
+        </el-form-item>
+        <el-form-item label="图书作者" prop="book_author">
+          <el-input v-model="bookForm.book_author"></el-input>
+        </el-form-item>
+        <el-form-item label="图书页数" prop="book_pagination">
+          <el-input v-model.number="bookForm.book_pagination"></el-input>
+        </el-form-item>
+        <el-form-item label="图书价格" prop="book_price">
+          <el-input v-model.number="bookForm.book_price"></el-input>
+        </el-form-item>
+      </el-form>
+      <el-row justify="end">
+        <el-button type="danger" @click="updateConfirm">修 改</el-button>
+        <el-button type="danger" @click="delConfirm">删 除</el-button>
+        <el-button @click="updateBookVisible = false">取 消</el-button>
+      </el-row>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { bookList, addBook } from "@/api/book.js";
+import { ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import { bookList, addBook, updateBook, delBook } from "@/api/book.js";
 import { ref, onMounted } from "vue";
 import Pagination from '@/components/Pagination/index.vue'
 const total = ref(0);
@@ -131,6 +131,7 @@ const rules = ref({
   ],
 });
 const addBookVisible = ref(false);
+const updateBookVisible = ref(false);
 const title = ref("");
 const bookForm = ref({
   book_name: "",
@@ -177,6 +178,15 @@ const refresh = () => {
 
 const handleAddBook = () => {
   title.value = "新增图书";
+  bookForm.value = {
+    book_id: "",
+    book_name: "",
+    book_isbn: "",
+    book_press: "",
+    book_author: "",
+    book_pagination: "",
+    book_price: "",
+  };
   addBookVisible.value = true;
 };
 
@@ -193,14 +203,18 @@ const confirm = () => {
         message: "添加失败",
         type: "error",
       });
-    });
+    })
+    .finally(() => {
+      addBookVisible.value = false
+      handleQuery()
+    })
 };
 
 const cancel = () => {
   addBookVisible.value = false;
 };
 
-const getList = (p) =>{
+const getList = (p) => {
   queryParams.value.pageSize = p.limit
   queryParams.value.pageNum = p.page
   bookList(queryParams.value).then((res) => {
@@ -208,5 +222,58 @@ const getList = (p) =>{
     total.value = res.data.total;
   });
 
+}
+
+const handleDetail = (row) => {
+  title.value = '编辑图书'
+  bookForm.value = { ...row }
+  updateBookVisible.value = true
+}
+
+const updateConfirm = () => {
+  updateBook(bookForm.value).then(res => {
+    ElMessage({
+      message: "修改成功",
+      type: "success",
+    });
+  })
+    .catch(e => {
+      ElMessage({
+        message: "修改失败",
+        type: "error",
+      });
+    })
+    .finally(() => {
+      updateBookVisible.value = false
+      handleQuery()
+    })
+}
+
+const delConfirm = () => {
+  const id = bookForm.value.book_id
+  ElMessageBox.confirm('确认删除当前编号为' + id + '的图书吗', '警告', {
+    confirmButtonText: '确认',
+    cancelButtonText: '取消',
+    type: 'warning',
+  })
+    .then(() => {
+      delBook(id)
+        .then(res => {
+          ElMessage({
+            message: "删除成功",
+            type: "success",
+          });
+        })
+        .catch(e => {
+          ElMessage({
+            message: "删除失败",
+            type: "error",
+          });
+        })
+        .finally(()=>{
+          updateBookVisible.value = false
+          handleQuery()
+        })
+    })
 }
 </script>

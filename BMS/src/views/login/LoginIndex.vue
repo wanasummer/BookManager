@@ -41,9 +41,11 @@ const loginHandle = async () => {
       const role = res.data.data.user_role
       const name = res.data.data.user_name
       const token = res.data.data.token
+      const userId = res.data.data.user_id
       localStorage.setItem('role', role);
       localStorage.setItem('name', name);
       localStorage.setItem('token',token)
+      localStorage.setItem('userId',userId)
       console.log(res)
       const redirect = route.query.redirect || '/book';
       await router.push(redirect);

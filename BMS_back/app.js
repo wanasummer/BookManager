@@ -145,9 +145,11 @@ app.post('/api/register', (req, res) => {
 
 //  获取图书列表
 app.get("/api/getBookInfo", (req, res) => {
-  let baseSql = `SELECT book_id, book_name, book_isbn, book_press, book_author, book_pagination, book_price, book_status FROM book`;
+  let status = req.query.status ? 0 : 1
+  console.log(req.query)
+  let baseSql = `SELECT book_id, book_name, book_isbn, book_press, book_author, book_pagination, book_price, book_status,booking_id FROM book`;
   let countSql = `SELECT COUNT(*) AS total FROM book`;
-  const whereClauses = [`is_deleted = false`];
+  const whereClauses = [`(is_deleted != 1 or is_deleted is null) and book_status != ${status}`];
   const queryParams = [];
 
   // 动态添加查询条件
@@ -418,7 +420,7 @@ app.get('/api/getUserList', (req, res) => {
   }
 
   // 构建 SQL 查询
-  let sqlStr = 'SELECT * FROM user';
+  let sqlStr = 'SELECT user_id,user_name,user_email,user_role,user_status,created_at FROM user';
 
   // 如果有查询条件，添加 WHERE 子句
   if (whereClauses.length > 0) {
@@ -427,14 +429,14 @@ app.get('/api/getUserList', (req, res) => {
 
   // 添加分页查询
   sqlStr += ' LIMIT ? OFFSET ?';
-  params.push(size, offset);
+  params.push(parseInt(size), parseInt(offset));
 
   // 执行查询
   db.query(sqlStr, params, (err, results) => {
     if (err) {
+      console.log(sqlStr,params)
       return res.status(500).send({ code: 500, msg: '服务器错误：' + err.message });
     }
-
     // 查询总记录数，用于计算总页数
     const countSql = 'SELECT COUNT(*) AS total FROM user' + (whereClauses.length > 0 ? ' WHERE ' + whereClauses.join(' AND ') : '');
     db.query(countSql, params.slice(0, params.length - 2), (err, countResults) => {
